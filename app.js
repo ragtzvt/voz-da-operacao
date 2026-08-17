@@ -391,17 +391,19 @@ async function populateFormDropdowns() {
 
         // Áreas + Outros...
         dom.complaintArea.innerHTML = '<option value="" disabled selected>Selecione a área impactada...</option>' + 
-            resAreas.data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("") +
+            resAreas.data.filter(a => !a.nome.toLowerCase().includes("outro")).map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("") +
             '<option value="OUTROS">Outros...</option>';
         
         // Ferramentas + Outros...
         dom.complaintTool.innerHTML = '<option value="" disabled selected>Selecione a ferramenta...</option>' + 
-            resFerramentas.data.map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
+            resFerramentas.data.filter(t => !t.nome.toLowerCase().includes("outro")).map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
             '<option value="OUTROS">Outros...</option>';
 
-        // Etapas simples vindo do banco de dados (sem caixa extra)
+        // Etapas em ordem + Outros... no FINAL fixo
         dom.complaintStage.innerHTML = '<option value="" disabled selected>Selecione a etapa afetada...</option>' + 
-            resEtapas.data.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("");
+            resEtapas.data.filter(e => !e.nome.toLowerCase().includes("outro")).map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("") +
+            '<option value="OUTROS">Outros...</option>';
+
     } catch (error) {
         showToast("Erro ao carregar opções do formulário.");
     }
