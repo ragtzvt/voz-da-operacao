@@ -34,7 +34,6 @@ const dom = {
     complaintStage: document.getElementById("complaintStage"),
     complaintArea: document.getElementById("complaintArea"),
     complaintTool: document.getElementById("complaintTool"),
-    charCount: document.getElementById("charCount"),
     
     // Página 3: Mural
     cardsFeed: document.getElementById("cardsFeed"),
@@ -102,7 +101,6 @@ function initLoginPage() {
         });
     }
 
-    // Login Form Submit
     if (dom.loginForm) {
         dom.loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -147,7 +145,6 @@ function initLoginPage() {
         });
     }
 
-    // Register Form Submit com suporte a "Outros..."
     if (dom.registerForm) {
         dom.registerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -162,7 +159,6 @@ function initLoginPage() {
             try {
                 showToast("Criando conta no sistema...");
 
-                // Se selecionou "Outros...", insere a nova área primeiro
                 if (areaId === "OUTROS") {
                     const customAreaName = customAreaInput ? customAreaInput.value.trim() : "";
                     if (!customAreaName) {
@@ -180,14 +176,12 @@ function initLoginPage() {
                     areaId = newArea.id;
                 }
 
-                // 1. Cria a conta no Supabase Auth
                 const { data, error } = await supabaseCliente.auth.signUp({
                     email: email,
                     password: password,
                 });
                 if (error) throw error;
 
-                // 2. Cria o Perfil do usuário
                 if (data.user) {
                     let nomeExtraido = email.split("@")[0].replace(".", " ");
                     
@@ -225,18 +219,12 @@ async function loadAreasForRegister() {
         if (error) console.error("Erro ao carregar áreas:", error.message);
 
         let options = '<option value="" disabled selected>Selecione seu setor...</option>';
-        
-        // 1. Carrega as áreas do banco
         if (areas && areas.length > 0) {
             options += areas.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
         }
-        
-        // 2. FORÇA a inclusão do "Outros..." no final da lista
         options += '<option value="OUTROS">Outros...</option>';
-        
         dom.regArea.innerHTML = options;
 
-        // Ouvinte de evento para abrir/fechar a caixa de texto
         const customAreaGroup = document.getElementById("customAreaGroup");
         const customAreaInput = document.getElementById("customAreaInput");
 
@@ -273,39 +261,13 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
-    const customToolGroup = document.getElementById("customToolGroup");
-    const customToolInput = document.getElementById("customToolInput");
-
-    if (dom.complaintTool) {
-        dom.complaintTool.addEventListener("change", (e) => {
-            if (e.target.value === "OUTROS") {
-                if (customToolGroup) customToolGroup.style.display = "block";
-                if (customToolInput) {
-                    customToolInput.required = true;
-                    customToolInput.focus();
-                }
-            } else {
-                if (customToolGroup) customToolGroup.style.display = "none";
-                if (customToolInput) {
-                    customToolInput.required = false;
-                    customToolInput.value = "";
-                }
-            }
-        });
-    }
+    // Eventos do "Outros..." para os três campos
+    setupCustomOptionToggle("complaintStage", "customStageGroup", "customStageInput");
+    setupCustomOptionToggle("complaintArea", "customAreaGroup", "customAreaInput");
+    setupCustomOptionToggle("complaintTool", "customToolGroup", "customToolInput");
 
     if (state.user && state.user.area_id) {
         dom.complaintArea.value = state.user.area_id;
-    }
-
-    if (dom.complaintDescription) {
-        dom.complaintDescription.addEventListener("input", (e) => {
-            const count = e.target.value.length;
-            dom.charCount.textContent = count;
-            dom.charCount.className = "";
-            if (count >= 285) dom.charCount.classList.add("danger");
-            else if (count >= 250) dom.charCount.classList.add("warning");
-        });
     }
 
     dom.complaintForm.addEventListener("submit", async (e) => {
@@ -313,8 +275,8 @@ async function initFormPage() {
 
         const title = dom.complaintTitle.value.trim();
         const description = dom.complaintDescription.value.trim();
-        const stageId = dom.complaintStage.value;
-        const areaId = dom.complaintArea.value;
+        let stageId = dom.complaintStage.value;
+        let areaId = dom.complaintArea.value;
         let toolId = dom.complaintTool.value;
 
         if (!title || !description || !stageId || !areaId || !toolId) {
@@ -325,10 +287,11 @@ async function initFormPage() {
         try {
             showToast("Analisando sugestões existentes...");
 
+            // Checa duplicidade
             const { data: duplicadas, error: dupError } = await supabaseCliente
                 .rpc("verificar_reclamacao_duplicada", {
                     p_titulo: title,
-                    p_area_id: areaId
+                    p_area_id: areaId === "OUTROS" ? "00000000-0000-0000-0000-000000000000" : areaId
                 });
 
             if (dupError) throw dupError;
@@ -339,21 +302,39 @@ async function initFormPage() {
                 return;
             }
 
+            // 1. Trata ETAPA se for "OUTROS"
+            if (stageId === "OUTROS") {
+                const input = document.getElementById("customStageInput");
+                const customName = input ? input.value.trim() : "";
+                if (!customName) { showToast("Por favor, digite o nome da nova etapa."); return; }
+
+                const { data: newStage, error: err } = await supabaseCliente
+                    .from("etapas").insert({ nome: customName }).select("id").single();
+                if (err) throw new Error("Erro ao salvar nova etapa: " + err.message);
+                stageId = newStage.id;
+            }
+
+            // 2. Trata ÁREA se for "OUTROS"
+            if (areaId === "OUTROS") {
+                const input = document.getElementById("customAreaInput");
+                const customName = input ? input.value.trim() : "";
+                if (!customName) { showToast("Por favor, digite o nome da nova área."); return; }
+
+                const { data: newArea, error: err } = await supabaseCliente
+                    .from("areas").insert({ nome: customName }).select("id").single();
+                if (err) throw new Error("Erro ao salvar nova área: " + err.message);
+                areaId = newArea.id;
+            }
+
+            // 3. Trata FERRAMENTA se for "OUTROS"
             if (toolId === "OUTROS") {
-                const customToolName = customToolInput ? customToolInput.value.trim() : "";
-                if (!customToolName) {
-                    showToast("Por favor, digite o nome da nova ferramenta.");
-                    return;
-                }
+                const input = document.getElementById("customToolInput");
+                const customName = input ? input.value.trim() : "";
+                if (!customName) { showToast("Por favor, digite o nome da nova ferramenta."); return; }
 
-                showToast("Cadastrando nova ferramenta...");
-                const { data: newTool, error: toolErr } = await supabaseCliente
-                    .from("ferramentas")
-                    .insert({ nome: customToolName })
-                    .select("id")
-                    .single();
-
-                if (toolErr) throw new Error("Erro ao salvar ferramenta: " + toolErr.message);
+                const { data: newTool, error: err } = await supabaseCliente
+                    .from("ferramentas").insert({ nome: customName }).select("id").single();
+                if (err) throw new Error("Erro ao salvar nova ferramenta: " + err.message);
                 toolId = newTool.id;
             }
 
@@ -385,6 +366,30 @@ async function initFormPage() {
     });
 }
 
+function setupCustomOptionToggle(selectId, groupContainerId, inputId) {
+    const selectElem = document.getElementById(selectId);
+    const groupElem = document.getElementById(groupContainerId);
+    const inputElem = document.getElementById(inputId);
+
+    if (selectElem) {
+        selectElem.addEventListener("change", (e) => {
+            if (e.target.value === "OUTROS") {
+                if (groupElem) groupElem.style.display = "block";
+                if (inputElem) {
+                    inputElem.required = true;
+                    inputElem.focus();
+                }
+            } else {
+                if (groupElem) groupElem.style.display = "none";
+                if (inputElem) {
+                    inputElem.required = false;
+                    inputElem.value = "";
+                }
+            }
+        });
+    }
+}
+
 async function populateFormDropdowns() {
     try {
         const [resAreas, resFerramentas, resEtapas] = await Promise.all([
@@ -397,15 +402,20 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
+        // Áreas + Outros...
         dom.complaintArea.innerHTML = '<option value="" disabled selected>Selecione a área impactada...</option>' + 
-            resAreas.data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
+            resAreas.data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("") +
+            '<option value="OUTROS">Outros...</option>';
         
+        // Ferramentas + Outros...
         dom.complaintTool.innerHTML = '<option value="" disabled selected>Selecione a ferramenta...</option>' + 
             resFerramentas.data.map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
             '<option value="OUTROS">Outros...</option>';
 
+        // Etapas + Outros...
         dom.complaintStage.innerHTML = '<option value="" disabled selected>Selecione a etapa afetada...</option>' + 
-            resEtapas.data.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("");
+            resEtapas.data.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("") +
+            '<option value="OUTROS">Outros...</option>';
     } catch (error) {
         showToast("Erro ao carregar opções do formulário.");
     }
