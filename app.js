@@ -261,8 +261,7 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
-    // Eventos do "Outros..." para os três campos
-    setupCustomOptionToggle("complaintStage", "customStageGroup", "customStageInput");
+    // Eventos do "Outros..." para Área e Ferramenta
     setupCustomOptionToggle("complaintArea", "customAreaGroup", "customAreaInput");
     setupCustomOptionToggle("complaintTool", "customToolGroup", "customToolInput");
 
@@ -302,19 +301,7 @@ async function initFormPage() {
                 return;
             }
 
-            // 1. Trata ETAPA se for "OUTROS"
-            if (stageId === "OUTROS") {
-                const input = document.getElementById("customStageInput");
-                const customName = input ? input.value.trim() : "";
-                if (!customName) { showToast("Por favor, digite o nome da nova etapa."); return; }
-
-                const { data: newStage, error: err } = await supabaseCliente
-                    .from("etapas").insert({ nome: customName }).select("id").single();
-                if (err) throw new Error("Erro ao salvar nova etapa: " + err.message);
-                stageId = newStage.id;
-            }
-
-            // 2. Trata ÁREA se for "OUTROS"
+            // Trata ÁREA se for "OUTROS"
             if (areaId === "OUTROS") {
                 const input = document.getElementById("customAreaInput");
                 const customName = input ? input.value.trim() : "";
@@ -326,7 +313,7 @@ async function initFormPage() {
                 areaId = newArea.id;
             }
 
-            // 3. Trata FERRAMENTA se for "OUTROS"
+            // Trata FERRAMENTA se for "OUTROS"
             if (toolId === "OUTROS") {
                 const input = document.getElementById("customToolInput");
                 const customName = input ? input.value.trim() : "";
@@ -412,10 +399,9 @@ async function populateFormDropdowns() {
             resFerramentas.data.map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
             '<option value="OUTROS">Outros...</option>';
 
-        // Etapas + Outros...
+        // Etapas simples vindo do banco de dados (sem caixa extra)
         dom.complaintStage.innerHTML = '<option value="" disabled selected>Selecione a etapa afetada...</option>' + 
-            resEtapas.data.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("") +
-            '<option value="OUTROS">Outros...</option>';
+            resEtapas.data.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("");
     } catch (error) {
         showToast("Erro ao carregar opções do formulário.");
     }
