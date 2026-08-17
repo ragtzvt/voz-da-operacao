@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mural de Reclamações - Voz da Operação</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background glow particles for premium aesthetic -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <!-- 3. TELA DO MURAL DE RECLAMAÇÕES (FEED) -->
+        <main class="container-mural">
+            
+            <section class="mural-panel glass-card">
+                <div class="mural-header">
+                    <div class="mural-title-row">
+                        <div>
+                            <h2>Mural de Sugestões</h2>
+                            <p class="panel-subtitle">Veja as principais ideias registradas para melhorar a operação.</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary-outline" id="goToFormBtn">
+                            <i class="fa-regular fa-plus"></i> Nova Sugestão
+                        </button>
+                    </div>
+
+                    <!-- Filter Bar Row -->
+                    <div class="filter-bar">
+                        <div class="search-input-wrapper">
+                            <i class="fa-regular fa-magnifying-glass search-icon"></i>
+                            <input type="text" id="muralSearch" placeholder="Buscar reclamação...">
+                        </div>
+                        
+                        <div class="dropdown-filters-grid">
+                            <div class="filter-select-wrapper">
+                                <select id="filterSort">
+                                    <option value="votes">Mais Votados</option>
+                                    <option value="recent">Mais Recentes</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-select-wrapper">
+                                <select id="filterStage">
+                                    <option value="">Todas as etapas</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-select-wrapper">
+                                <select id="filterArea">
+                                    <option value="">Todas as áreas</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-select-wrapper">
+                                <select id="filterTool">
+                                    <option value="">Todas as ferramentas</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feed Container (Dynamic Cards) -->
+                <div class="cards-feed" id="cardsFeed">
+                    <!-- Cards will be dynamically rendered here by app.js -->
+                </div>
+
+                <!-- Pagination Footer -->
+                <div class="pagination-container" id="pagination">
+                    <!-- Pagination buttons will be rendered here dynamically -->
+                </div>
+            </section>
+
+           <!-- Notification Toast Element -->
+    <div id="toast" class="toast hidden">
+        <div class="toast-content">
+            <i class="fa-regular fa-circle-check toast-icon"></i>
+            <span id="toastMessage">Operação realizada com sucesso!</span>
+        </div>
+    </div>
+
+    <!-- Supabase Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   
+    <!-- Script file -->
+    <script src="app.js"></script>
+</body>
+</html>

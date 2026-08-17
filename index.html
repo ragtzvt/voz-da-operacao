@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso - Voz da Operação</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background glow particles for premium aesthetic -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <main class="container-login glass-card">
+            
+            <div class="logo-container">
+                <span class="logo-text">AZZAS 2154</span>
+                <span class="logo-subtext">FASHION & LIFESTYLE</span>
+            </div>
+            
+            <!-- ========================================== -->
+            <!-- SESSÃO DE LOGIN (Visível por padrão) -->
+            <!-- ========================================== -->
+            <div id="loginSection">
+                <div class="login-header">
+                    <h2>Acesse o Painel</h2>
+                    <p class="panel-subtitle">Faça login para ver o mural e registrar dores.</p>
+                </div>
+
+                <form id="loginForm" class="interactive-form">
+                    <div class="form-group">
+                        <label for="loginEmail">E-mail corporativo</label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-envelope input-icon"></i>
+                            <input type="email" id="loginEmail" placeholder="exemplo@usereserva.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Senha</label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-lock input-icon"></i>
+                            <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Entrar <i class="fa-regular fa-arrow-right-to-bracket icon-right"></i>
+                    </button>
+
+                    <div class="form-footer-links" style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <a href="#" id="forgotPasswordLink" class="small-link">Esqueci a senha</a>
+                        <a href="#" id="linkToRegister" class="small-link" style="color: #4a90e2; font-weight: 600;">Criar uma conta</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SESSÃO DE CADASTRO (Escondida por padrão) -->
+            <!-- ========================================== -->
+            <div id="registerSection" style="display: none;">
+                <div class="login-header">
+                    <h2>Crie sua Conta</h2>
+                    <p class="panel-subtitle">Junte-se à Voz da Operação.</p>
+                </div>
+
+                <form id="registerForm" class="interactive-form">
+                    <div class="form-group">
+                        <label for="regEmail">E-mail corporativo</label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-envelope input-icon"></i>
+                            <input type="email" id="regEmail" placeholder="exemplo@usereserva.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regPassword">Senha (Mínimo 6 caracteres)</label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-lock input-icon"></i>
+                            <input type="password" id="regPassword" placeholder="Crie uma senha segura" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regArea">Sua Área / Setor</label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-users-gear input-icon"></i>
+                            <select id="regArea" required>
+                                <option value="" disabled selected>Selecione seu setor...</option>
+                                <option value="Logística">Logística</option>
+                                <option value="Comercial">Comercial</option>
+                                <option value="Atendimento">Atendimento</option>
+                                <option value="TI/Suporte">TI / Suporte</option>
+                                <option value="Qualidade">Qualidade</option>
+                                <option value="Financeiro">Financeiro</option>
+                                <option value="Operações">Operações</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Cadastrar <i class="fa-regular fa-user-plus icon-right"></i>
+                    </button>
+
+                    <div class="form-footer-links" style="text-align: center; margin-top: 20px;">
+                        <a href="#" id="linkToLogin" class="small-link" style="color: #4a90e2; font-weight: 600;">Já tenho conta (Fazer Login)</a>
+                    </div>
+                </form>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Notification Toast Element -->
+    <div id="toast" class="toast hidden">
+        <div class="toast-content">
+            <i class="fa-regular fa-circle-check toast-icon"></i>
+            <span id="toastMessage">Operação realizada com sucesso!</span>
+        </div>
+    </div>
+
+    <!-- Supabase Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Script file -->
+    <script src="app.js"></script>
+</body>
+</html>
