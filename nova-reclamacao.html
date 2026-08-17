@@ -8,21 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome for modern icons -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Background glow particles for premium aesthetic -->
     <div class="bg-glow bg-glow-1"></div>
     <div class="bg-glow bg-glow-2"></div>
 
     <div class="app-container">
-        <!-- 2. TELA DE NOVA SUGESTÃO -->
+        <!-- TELA DE NOVA SUGESTÃO -->
         <main class="container-form glass-card" id="newComplaintSection">
             
-            <!-- ====== BOTÃO DE VOLTAR ====== -->
             <button type="button" class="btn btn-secondary-outline" id="backToMuralBtn" style="margin-bottom: 20px; cursor: pointer;">
                 <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i> Voltar para o Mural
             </button>
@@ -48,10 +46,7 @@
                 <div class="form-group">
                     <label for="complaintDescription">Detalhes da sugestão / impacto</label>
                     <div class="input-wrapper">
-                        <textarea id="complaintDescription" maxlength="300" placeholder="Descreva brevemente como esta ideia pode otimizar seu trabalho ou resolver um gargalo..." required></textarea>
-                        <div class="char-counter">
-                            <span id="charCount">0</span>/300
-                        </div>
+                        <textarea id="complaintDescription" placeholder="Descreva brevemente como esta ideia pode otimizar seu trabalho ou resolver um gargalo..." required></textarea>
                     </div>
                 </div>
 
