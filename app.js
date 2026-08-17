@@ -217,16 +217,26 @@ function initLoginPage() {
 async function loadAreasForRegister() {
     if (!dom.regArea) return;
     try {
-        const { data } = await supabaseCliente.from("areas").select("id, nome").order("nome");
-        
+        const { data: areas, error } = await supabaseCliente
+            .from("areas")
+            .select("id, nome")
+            .order("nome");
+
+        if (error) console.error("Erro ao carregar áreas:", error.message);
+
         let options = '<option value="" disabled selected>Selecione seu setor...</option>';
-        if (data && data.length > 0) {
-            options += data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
+        
+        // 1. Carrega as áreas do banco
+        if (areas && areas.length > 0) {
+            options += areas.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
         }
         
+        // 2. FORÇA a inclusão do "Outros..." no final da lista
         options += '<option value="OUTROS">Outros...</option>';
+        
         dom.regArea.innerHTML = options;
 
+        // Ouvinte de evento para abrir/fechar a caixa de texto
         const customAreaGroup = document.getElementById("customAreaGroup");
         const customAreaInput = document.getElementById("customAreaInput");
 
@@ -246,7 +256,7 @@ async function loadAreasForRegister() {
             }
         });
     } catch (error) {
-        console.error("Erro ao carregar áreas:", error);
+        console.error("Falha ao popular dropdown de setores:", error);
     }
 }
 
