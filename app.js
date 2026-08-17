@@ -102,6 +102,7 @@ function initLoginPage() {
         });
     }
 
+    // Login Form Submit
     if (dom.loginForm) {
         dom.loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -146,25 +147,47 @@ function initLoginPage() {
         });
     }
 
+    // Register Form Submit com suporte a "Outros..."
     if (dom.registerForm) {
         dom.registerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
             const email = dom.regEmail.value.trim();
             const password = dom.regPassword.value;
-            const area = dom.regArea.value;
+            let areaId = dom.regArea.value;
+            const customAreaInput = document.getElementById("customAreaInput");
 
             if (!validarEmailCorporativo(email)) return;
 
             try {
                 showToast("Criando conta no sistema...");
 
+                // Se selecionou "Outros...", insere a nova área primeiro
+                if (areaId === "OUTROS") {
+                    const customAreaName = customAreaInput ? customAreaInput.value.trim() : "";
+                    if (!customAreaName) {
+                        showToast("Por favor, digite o nome do seu setor.");
+                        return;
+                    }
+
+                    const { data: newArea, error: areaErr } = await supabaseCliente
+                        .from("areas")
+                        .insert({ nome: customAreaName })
+                        .select("id")
+                        .single();
+
+                    if (areaErr) throw new Error("Erro ao salvar novo setor: " + areaErr.message);
+                    areaId = newArea.id;
+                }
+
+                // 1. Cria a conta no Supabase Auth
                 const { data, error } = await supabaseCliente.auth.signUp({
                     email: email,
                     password: password,
                 });
                 if (error) throw error;
 
+                // 2. Cria o Perfil do usuário
                 if (data.user) {
                     let nomeExtraido = email.split("@")[0].replace(".", " ");
                     
@@ -173,7 +196,7 @@ function initLoginPage() {
                         .insert([{ 
                             id: data.user.id, 
                             nome: nomeExtraido, 
-                            area_id: area 
+                            area_id: areaId 
                         }]);
                     
                     if (profileError) console.error("Aviso ao criar perfil:", profileError);
@@ -193,10 +216,37 @@ function initLoginPage() {
 
 async function loadAreasForRegister() {
     if (!dom.regArea) return;
-    const { data } = await supabaseCliente.from("areas").select("id, nome").order("nome");
-    if (data) {
-        dom.regArea.innerHTML = '<option value="" disabled selected>Selecione seu setor...</option>' + 
-            data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
+    try {
+        const { data } = await supabaseCliente.from("areas").select("id, nome").order("nome");
+        
+        let options = '<option value="" disabled selected>Selecione seu setor...</option>';
+        if (data && data.length > 0) {
+            options += data.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
+        }
+        
+        options += '<option value="OUTROS">Outros...</option>';
+        dom.regArea.innerHTML = options;
+
+        const customAreaGroup = document.getElementById("customAreaGroup");
+        const customAreaInput = document.getElementById("customAreaInput");
+
+        dom.regArea.addEventListener("change", (e) => {
+            if (e.target.value === "OUTROS") {
+                if (customAreaGroup) customAreaGroup.style.display = "block";
+                if (customAreaInput) {
+                    customAreaInput.required = true;
+                    customAreaInput.focus();
+                }
+            } else {
+                if (customAreaGroup) customAreaGroup.style.display = "none";
+                if (customAreaInput) {
+                    customAreaInput.required = false;
+                    customAreaInput.value = "";
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao carregar áreas:", error);
     }
 }
 
@@ -265,7 +315,6 @@ async function initFormPage() {
         try {
             showToast("Analisando sugestões existentes...");
 
-            // Checa duplicidade
             const { data: duplicadas, error: dupError } = await supabaseCliente
                 .rpc("verificar_reclamacao_duplicada", {
                     p_titulo: title,
@@ -280,7 +329,6 @@ async function initFormPage() {
                 return;
             }
 
-            // Tratamento de "Outros..."
             if (toolId === "OUTROS") {
                 const customToolName = customToolInput ? customToolInput.value.trim() : "";
                 if (!customToolName) {

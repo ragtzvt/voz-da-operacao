@@ -8,114 +8,110 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome for modern icons -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Background glow particles for premium aesthetic -->
     <div class="bg-glow bg-glow-1"></div>
     <div class="bg-glow bg-glow-2"></div>
 
     <div class="app-container">
-        <main class="container-login glass-card">
-            
-            <div class="logo-container">
-                <span class="logo-text">AZZAS 2154</span>
-                <span class="logo-subtext">FASHION & LIFESTYLE</span>
+        <!-- SEÇÃO DE LOGIN -->
+        <main class="container-auth glass-card" id="loginSection">
+            <div class="panel-header">
+                <div class="panel-title-wrapper">
+                    <div class="icon-badge">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                    </div>
+                    <h2>Voz da Operação</h2>
+                </div>
+                <p class="panel-subtitle">Acesse com sua conta corporativa para enviar e visualizar sugestões.</p>
             </div>
-            
-            <!-- ========================================== -->
-            <!-- SESSÃO DE LOGIN (Visível por padrão) -->
-            <!-- ========================================== -->
-            <div id="loginSection">
-                <div class="login-header">
-                    <h2>Acesse o Painel</h2>
-                    <p class="panel-subtitle">Faça login para ver o mural e registrar dores.</p>
+
+            <form id="loginForm" class="interactive-form">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail Corporativo</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="loginEmail" placeholder="seu.nome@usereserva.com" required>
+                    </div>
                 </div>
 
-                <form id="loginForm" class="interactive-form">
-                    <div class="form-group">
-                        <label for="loginEmail">E-mail corporativo</label>
-                        <div class="input-wrapper">
-                            <i class="fa-regular fa-envelope input-icon"></i>
-                            <input type="email" id="loginEmail" placeholder="exemplo@usereserva.com" required>
-                        </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="loginPassword" placeholder="Sua senha de acesso" required>
+                        <button type="button" class="btn-toggle-pw" id="togglePasswordBtn">
+                            <i class="fa-regular fa-eye" id="eyeIcon"></i>
+                        </button>
                     </div>
-
-                    <div class="form-group">
-                        <label for="loginPassword">Senha</label>
-                        <div class="input-wrapper">
-                            <i class="fa-regular fa-lock input-icon"></i>
-                            <input type="password" id="loginPassword" placeholder="Sua senha" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Entrar <i class="fa-regular fa-arrow-right-to-bracket icon-right"></i>
-                    </button>
-
-                    <div class="form-footer-links" style="display: flex; justify-content: space-between; margin-top: 20px;">
-                        <a href="#" id="forgotPasswordLink" class="small-link">Esqueci a senha</a>
-                        <a href="#" id="linkToRegister" class="small-link" style="color: #4a90e2; font-weight: 600;">Criar uma conta</a>
-                    </div>
-                </form>
-            </div>
-
-            <!-- ========================================== -->
-            <!-- SESSÃO DE CADASTRO (Escondida por padrão) -->
-            <!-- ========================================== -->
-            <div id="registerSection" style="display: none;">
-                <div class="login-header">
-                    <h2>Crie sua Conta</h2>
-                    <p class="panel-subtitle">Junte-se à Voz da Operação.</p>
                 </div>
 
-                <form id="registerForm" class="interactive-form">
-                    <div class="form-group">
-                        <label for="regEmail">E-mail corporativo</label>
-                        <div class="input-wrapper">
-                            <i class="fa-regular fa-envelope input-icon"></i>
-                            <input type="email" id="regEmail" placeholder="exemplo@usereserva.com" required>
-                        </div>
-                    </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span>Entrar no Sistema</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+            </form>
 
-                    <div class="form-group">
-                        <label for="regPassword">Senha (Mínimo 6 caracteres)</label>
-                        <div class="input-wrapper">
-                            <i class="fa-regular fa-lock input-icon"></i>
-                            <input type="password" id="regPassword" placeholder="Crie uma senha segura" required>
-                        </div>
-                    </div>
+            <div class="auth-footer" style="margin-top: 20px; text-align: center;">
+                <p>Ainda não tem uma conta? <a href="#" id="linkToRegister" style="color: var(--accent-color); font-weight: 600;">Cadastre-se</a></p>
+            </div>
+        </main>
 
-                    <div class="form-group">
-                        <label for="regArea">Sua Área / Setor</label>
-                        <div class="input-wrapper">
-                            <i class="fa-regular fa-users-gear input-icon"></i>
-                            <select id="regArea" required>
-                                <option value="" disabled selected>Selecione seu setor...</option>
-                                <option value="Logística">Logística</option>
-                                <option value="Comercial">Comercial</option>
-                                <option value="Atendimento">Atendimento</option>
-                                <option value="TI/Suporte">TI / Suporte</option>
-                                <option value="Qualidade">Qualidade</option>
-                                <option value="Financeiro">Financeiro</option>
-                                <option value="Operações">Operações</option>
-                            </select>
-                        </div>
+        <!-- SEÇÃO DE CADASTRO -->
+        <main class="container-auth glass-card" id="registerSection" style="display: none;">
+            <div class="panel-header">
+                <div class="panel-title-wrapper">
+                    <div class="icon-badge">
+                        <i class="fa-solid fa-user-plus"></i>
                     </div>
-
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Cadastrar <i class="fa-regular fa-user-plus icon-right"></i>
-                    </button>
-
-                    <div class="form-footer-links" style="text-align: center; margin-top: 20px;">
-                        <a href="#" id="linkToLogin" class="small-link" style="color: #4a90e2; font-weight: 600;">Já tenho conta (Fazer Login)</a>
-                    </div>
-                </form>
+                    <h2>Criar Conta</h2>
+                </div>
+                <p class="panel-subtitle">Cadastre-se com seu e-mail corporativo para acessar o painel de sugestões.</p>
             </div>
 
+            <form id="registerForm" class="interactive-form">
+                <div class="form-group">
+                    <label for="regEmail">E-mail Corporativo <span class="required-badge">*</span></label>
+                    <div class="input-wrapper">
+                        <input type="email" id="regEmail" placeholder="seu.nome@usereserva.com" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Senha <span class="required-badge">*</span></label>
+                    <div class="input-wrapper">
+                        <input type="password" id="regPassword" placeholder="Crie uma senha forte" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regArea">Sua Área / Setor <span class="required-badge">*</span></label>
+                    <div class="input-wrapper">
+                        <select id="regArea" required>
+                            <option value="" disabled selected>Carregando setores...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- CAMPO DINÂMICO PARA OUTROS SETORES -->
+                <div class="form-group" id="customAreaGroup" style="display: none; margin-top: 15px;">
+                    <label for="customAreaInput">Qual é a sua Área / Setor? <span class="required-badge">*</span></label>
+                    <div class="input-wrapper">
+                        <input type="text" id="customAreaInput" placeholder="Digite o nome do seu setor...">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 20px;">
+                    <span>Finalizar Cadastro</span>
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </form>
+
+            <div class="auth-footer" style="margin-top: 20px; text-align: center;">
+                <p>Já possui uma conta? <a href="#" id="linkToLogin" style="color: var(--accent-color); font-weight: 600;">Fazer Login</a></p>
+            </div>
         </main>
     </div>
 
@@ -129,7 +125,6 @@
 
     <!-- Supabase Integration -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Script file -->
     <script src="app.js"></script>
 </body>
 </html>
