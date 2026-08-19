@@ -284,19 +284,18 @@ async function initFormPage() {
 }
 
 function formatDropdownOptions(items, placeholder) {
-    if (!items) return `<option value="" disabled selected>${placeholder}</option>`;
-
-    // Remove qualquer registro que venha do banco chamado "Outros"
-    const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
-
     let html = `<option value="" disabled selected>${placeholder}</option>`;
-    html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
-    
-    // Adiciona uma única opção "Outros..." estática no final
-    const outrosItem = items.find(item => item.nome.toLowerCase().startsWith("outro"));
-    if (outrosItem) {
-        html += `<option value="${outrosItem.id}">Outros...</option>`;
+
+    if (items && items.length > 0) {
+        // 1. Filtra qualquer "Outros" que possa existir no banco para evitar duplicatas
+        const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
+        
+        // 2. Renderiza as opções normais vindas do banco
+        html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
     }
+
+    // 3. Força a inclusão do "Outros..." SEMPRE como a última opção estática
+    html += `<option value="OUTROS">Outros...</option>`;
 
     return html;
 }
