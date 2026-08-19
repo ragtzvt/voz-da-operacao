@@ -60,7 +60,7 @@
                     </div>
                 </div>
 
-                <!-- ÁREA IMPACTADA -->
+                <!-- ÁREA IMPACTADA (INTACTO) -->
                 <div class="form-group">
                     <label for="complaintArea">Área impactada <span class="required-badge">*</span></label>
                     <div class="input-wrapper">
@@ -75,8 +75,16 @@
                     <label for="complaintTool">Ferramenta que pode ser melhorada <span class="required-badge">*</span></label>
                     <div class="input-wrapper">
                         <select id="complaintTool" required>
-                            <option value="" disabled selected>Carregando ferramentas...</option>
+                            <option value="" disabled selected>Selecione a ferramenta...</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- CAIXA DE TEXTO DINÂMICA (EXCLUSIVA DA FERRAMENTA) -->
+                <div class="form-group" id="customToolGroup" style="display: none; margin-top: 15px;">
+                    <label for="customToolInput">Qual a ferramenta? <span class="required-badge">*</span></label>
+                    <div class="input-wrapper">
+                        <input type="text" id="customToolInput" placeholder="Digite o nome da ferramenta...">
                     </div>
                 </div>
 

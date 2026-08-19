@@ -219,6 +219,28 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
+    // Comportamento dinâmico EXCLUSIVO da Ferramenta ao selecionar "Outros..."
+    const customToolGroup = document.getElementById("customToolGroup");
+    const customToolInput = document.getElementById("customToolInput");
+
+    if (dom.complaintTool) {
+        dom.complaintTool.addEventListener("change", (e) => {
+            if (e.target.value === "OUTROS") {
+                if (customToolGroup) customToolGroup.style.display = "block";
+                if (customToolInput) {
+                    customToolInput.required = true;
+                    customToolInput.focus();
+                }
+            } else {
+                if (customToolGroup) customToolGroup.style.display = "none";
+                if (customToolInput) {
+                    customToolInput.required = false;
+                    customToolInput.value = "";
+                }
+            }
+        });
+    }
+
     if (state.user && state.user.area_id) {
         dom.complaintArea.value = state.user.area_id;
     }
@@ -230,7 +252,7 @@ async function initFormPage() {
         const description = dom.complaintDescription.value.trim();
         const stageId = dom.complaintStage.value;
         const areaId = dom.complaintArea.value;
-        const toolId = dom.complaintTool.value;
+        let toolId = dom.complaintTool.value;
 
         if (!title || !description || !stageId || !areaId || !toolId) {
             showToast("Por favor, preencha todos os campos.");
@@ -253,6 +275,25 @@ async function initFormPage() {
                 const encontrada = duplicadas[0].titulo;
                 showToast(`Já existe uma sugestão similar: "${encontrada}". Verifique no Mural!`);
                 return;
+            }
+
+            // Cadastro de nova ferramenta caso o usuário selecione "Outros..."
+            if (toolId === "OUTROS") {
+                const customToolName = customToolInput ? customToolInput.value.trim() : "";
+                if (!customToolName) {
+                    showToast("Por favor, digite o nome da ferramenta.");
+                    return;
+                }
+
+                showToast("Cadastrating nova ferramenta...");
+                const { data: newTool, error: toolErr } = await supabaseCliente
+                    .from("ferramentas")
+                    .insert({ nome: customToolName })
+                    .select("id")
+                    .single();
+
+                if (toolErr) throw new Error("Erro ao salvar ferramenta: " + toolErr.message);
+                toolId = newTool.id;
             }
 
             showToast("Enviando sugestão...");
@@ -284,18 +325,19 @@ async function initFormPage() {
 }
 
 function formatDropdownOptions(items, placeholder) {
+    if (!items) return `<option value="" disabled selected>${placeholder}</option>`;
+
+    const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
+    const outrosItem = items.find(item => item.nome.toLowerCase().startsWith("outro"));
+
     let html = `<option value="" disabled selected>${placeholder}</option>`;
-
-    if (items && items.length > 0) {
-        // 1. Filtra qualquer "Outros" que possa existir no banco para evitar duplicatas
-        const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
-        
-        // 2. Renderiza as opções normais vindas do banco
-        html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
+    html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
+    
+    if (outrosItem) {
+        html += `<option value="${outrosItem.id}">Outros...</option>`;
+    } else {
+        html += `<option value="OUTROS">Outros...</option>`;
     }
-
-    // 3. Força a inclusão do "Outros..." SEMPRE como a última opção estática
-    html += `<option value="OUTROS">Outros...</option>`;
 
     return html;
 }
@@ -312,9 +354,26 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
-        dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
-        dom.complaintTool.innerHTML = formatDropdownOptions(resFerramentas.data, "Selecione a ferramenta...");
-        dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
+        // Área impactada (Mantida estritamente intacta)
+        if (dom.complaintArea) {
+            dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
+        }
+
+        // Etapa afetada
+        if (dom.complaintStage) {
+            dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
+        }
+
+        // Ferramenta: remove 'EXCEL' e 'Outros' do banco e adiciona 'Outros...' estático com valor "OUTROS" para disparar a caixa de texto
+        if (dom.complaintTool) {
+            const ferramentasFiltradas = resFerramentas.data.filter(t => 
+                t.nome.toUpperCase() !== 'EXCEL' && !t.nome.toLowerCase().startsWith('outro')
+            );
+
+            dom.complaintTool.innerHTML = '<option value="" disabled selected>Selecione a ferramenta...</option>' + 
+                ferramentasFiltradas.map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
+                '<option value="OUTROS">Outros...</option>';
+        }
     } catch (error) {
         showToast("Erro ao carregar opções do formulário.");
     }
