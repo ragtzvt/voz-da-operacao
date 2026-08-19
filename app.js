@@ -262,7 +262,7 @@ async function initFormPage() {
         try {
             showToast("Analisando sugestões existentes...");
 
-            // Checa duplicidade
+            // Checa duplicidade de sugestão
             const { data: duplicadas, error: dupError } = await supabaseCliente
                 .rpc("verificar_reclamacao_duplicada", {
                     p_titulo: title,
@@ -277,7 +277,7 @@ async function initFormPage() {
                 return;
             }
 
-            // Cadastro de nova ferramenta caso o usuário selecione "Outros..."
+            // Tratamento da caixa de digitação de Ferramentas ao escolher "Outros..."
             if (toolId === "OUTROS") {
                 const customToolName = customToolInput ? customToolInput.value.trim() : "";
                 if (!customToolName) {
@@ -285,15 +285,30 @@ async function initFormPage() {
                     return;
                 }
 
-                showToast("Cadastrating nova ferramenta...");
-                const { data: newTool, error: toolErr } = await supabaseCliente
-                    .from("ferramentas")
-                    .insert({ nome: customToolName })
-                    .select("id")
-                    .single();
+                showToast("Verificando ferramenta...");
 
-                if (toolErr) throw new Error("Erro ao salvar ferramenta: " + toolErr.message);
-                toolId = newTool.id;
+                // 1. Procura se a ferramenta já existe no banco
+                const { data: existingTool } = await supabaseCliente
+                    .from("ferramentas")
+                    .select("id")
+                    .ilike("nome", customToolName)
+                    .maybeSingle();
+
+                if (existingTool) {
+                    // Se já existe, reaproveita o ID
+                    toolId = existingTool.id;
+                } else {
+                    // Se não existe, cadastra a nova ferramenta
+                    showToast("Cadastrando nova ferramenta...");
+                    const { data: newTool, error: toolErr } = await supabaseCliente
+                        .from("ferramentas")
+                        .insert({ nome: customToolName })
+                        .select("id")
+                        .single();
+
+                    if (toolErr) throw new Error("Erro ao salvar ferramenta: " + toolErr.message);
+                    toolId = newTool.id;
+                }
             }
 
             showToast("Enviando sugestão...");
@@ -325,21 +340,19 @@ async function initFormPage() {
 }
 
 function formatDropdownOptions(items, placeholder) {
-    if (!items || items.length === 0) return `<option value="" disabled selected>${placeholder}</option>`;
+    if (!items || items.length === 0) {
+        return `<option value="" disabled selected>${placeholder}</option><option value="OUTROS">Outros...</option>`;
+    }
 
-    // Separa os itens normais do item "Outros"
     const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
     const outrosItem = items.find(item => item.nome.toLowerCase().startsWith("outro"));
 
     let html = `<option value="" disabled selected>${placeholder}</option>`;
-    
-    // Renderiza a lista ordenada sem o "Outros" no meio
     html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
     
-    // Anexa o "Outros..." no final usando o UUID real vindo do banco
-    if (outrosItem) {
-        html += `<option value="${outrosItem.id}">Outros...</option>`;
-    }
+    // Adiciona "Outros..." no final usando o UUID retornado do Supabase
+    const outrosValue = outrosItem ? outrosItem.id : "OUTROS";
+    html += `<option value="${outrosValue}">Outros...</option>`;
 
     return html;
 }
@@ -356,17 +369,17 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
-        // Área impactada (Pega o UUID real da tabela 'areas')
+        // 1. Área impactada
         if (dom.complaintArea) {
             dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
         }
 
-        // Etapa afetada (Pega o UUID real da tabela 'etapas')
+        // 2. Etapa afetada
         if (dom.complaintStage) {
             dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
         }
 
-        // Ferramenta (Mantém a string 'OUTROS' para acionar o campo de digitação manual exclusivo)
+        // 3. Ferramenta (sem EXCEL + "Outros..." estático com valor "OUTROS" para disparar a caixa de texto)
         if (dom.complaintTool) {
             const ferramentasFiltradas = resFerramentas.data.filter(t => 
                 t.nome.toUpperCase() !== 'EXCEL' && !t.nome.toLowerCase().startsWith('outro')
