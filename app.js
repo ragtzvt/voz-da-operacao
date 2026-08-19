@@ -325,18 +325,20 @@ async function initFormPage() {
 }
 
 function formatDropdownOptions(items, placeholder) {
-    if (!items) return `<option value="" disabled selected>${placeholder}</option>`;
+    if (!items || items.length === 0) return `<option value="" disabled selected>${placeholder}</option>`;
 
+    // Separa os itens normais do item "Outros"
     const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
     const outrosItem = items.find(item => item.nome.toLowerCase().startsWith("outro"));
 
     let html = `<option value="" disabled selected>${placeholder}</option>`;
+    
+    // Renderiza a lista ordenada sem o "Outros" no meio
     html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
     
+    // Anexa o "Outros..." no final usando o UUID real vindo do banco
     if (outrosItem) {
         html += `<option value="${outrosItem.id}">Outros...</option>`;
-    } else {
-        html += `<option value="OUTROS">Outros...</option>`;
     }
 
     return html;
@@ -354,17 +356,17 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
-        // Área impactada (Mantida estritamente intacta)
+        // Área impactada (Pega o UUID real da tabela 'areas')
         if (dom.complaintArea) {
             dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
         }
 
-        // Etapa afetada
+        // Etapa afetada (Pega o UUID real da tabela 'etapas')
         if (dom.complaintStage) {
             dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
         }
 
-        // Ferramenta: remove 'EXCEL' e 'Outros' do banco e adiciona 'Outros...' estático com valor "OUTROS" para disparar a caixa de texto
+        // Ferramenta (Mantém a string 'OUTROS' para acionar o campo de digitação manual exclusivo)
         if (dom.complaintTool) {
             const ferramentasFiltradas = resFerramentas.data.filter(t => 
                 t.nome.toUpperCase() !== 'EXCEL' && !t.nome.toLowerCase().startsWith('outro')
