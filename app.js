@@ -234,6 +234,7 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
+    // Comportamento dinâmico EXCLUSIVO da Ferramenta ao selecionar "Outros..."
     const customToolGroup = document.getElementById("customToolGroup");
     const customToolInput = document.getElementById("customToolInput");
 
