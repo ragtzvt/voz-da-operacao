@@ -48,13 +48,27 @@ const dom = {
 
 // Inicialização do Script
 document.addEventListener("DOMContentLoaded", async () => {
-    loadLocalSession();
+    await loadLocalSession();
     detectPageAndInit();
 });
 
-function loadLocalSession() {
+async function loadLocalSession() {
     const saved = localStorage.getItem("voz_user");
-    if (saved) state.user = JSON.parse(saved);
+    if (saved) {
+        state.user = JSON.parse(saved);
+        // Atualiza/Valida permissão de Admin com o banco
+        try {
+            const { data: profile } = await supabaseCliente
+                .from("perfis")
+                .select("is_admin")
+                .eq("id", state.user.id)
+                .single();
+            if (profile) {
+                state.user.is_admin = !!profile.is_admin;
+                localStorage.setItem("voz_user", JSON.stringify(state.user));
+            }
+        } catch (e) { console.error(e); }
+    }
 }
 
 function detectPageAndInit() {
@@ -122,7 +136,7 @@ function initLoginPage() {
                 const user = data.user;
                 const { data: profile } = await supabaseCliente
                     .from("perfis")
-                    .select("nome, area_id")
+                    .select("nome, area_id, is_admin")
                     .eq("id", user.id)
                     .single();
 
@@ -130,7 +144,8 @@ function initLoginPage() {
                     id: user.id,
                     email: user.email,
                     name: profile ? profile.nome : (user.email.split("@")[0]),
-                    area_id: profile ? profile.area_id : null
+                    area_id: profile ? profile.area_id : null,
+                    is_admin: profile ? !!profile.is_admin : false
                 };
                 
                 localStorage.setItem("voz_user", JSON.stringify(activeUser));
@@ -219,7 +234,6 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
-    // Comportamento dinâmico EXCLUSIVO da Ferramenta ao selecionar "Outros..."
     const customToolGroup = document.getElementById("customToolGroup");
     const customToolInput = document.getElementById("customToolInput");
 
@@ -262,7 +276,6 @@ async function initFormPage() {
         try {
             showToast("Analisando sugestões existentes...");
 
-            // Checa duplicidade de sugestão
             const { data: duplicadas, error: dupError } = await supabaseCliente
                 .rpc("verificar_reclamacao_duplicada", {
                     p_titulo: title,
@@ -277,7 +290,6 @@ async function initFormPage() {
                 return;
             }
 
-            // Tratamento da caixa de digitação de Ferramentas ao escolher "Outros..."
             if (toolId === "OUTROS") {
                 const customToolName = customToolInput ? customToolInput.value.trim() : "";
                 if (!customToolName) {
@@ -287,7 +299,6 @@ async function initFormPage() {
 
                 showToast("Verificando ferramenta...");
 
-                // 1. Procura se a ferramenta já existe no banco
                 const { data: existingTool } = await supabaseCliente
                     .from("ferramentas")
                     .select("id")
@@ -295,10 +306,8 @@ async function initFormPage() {
                     .maybeSingle();
 
                 if (existingTool) {
-                    // Se já existe, reaproveita o ID
                     toolId = existingTool.id;
                 } else {
-                    // Se não existe, cadastra a nova ferramenta
                     showToast("Cadastrando nova ferramenta...");
                     const { data: newTool, error: toolErr } = await supabaseCliente
                         .from("ferramentas")
@@ -324,7 +333,8 @@ async function initFormPage() {
                     etapa_id: stageId,
                     area_id: areaId,
                     ferramenta_id: toolId,
-                    autor_id: user.id
+                    autor_id: user.id,
+                    status: 'Em Análise'
                 });
 
             if (insertError) throw insertError;
@@ -350,7 +360,6 @@ function formatDropdownOptions(items, placeholder) {
     let html = `<option value="" disabled selected>${placeholder}</option>`;
     html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
     
-    // Adiciona "Outros..." no final usando o UUID retornado do Supabase
     const outrosValue = outrosItem ? outrosItem.id : "OUTROS";
     html += `<option value="${outrosValue}">Outros...</option>`;
 
@@ -369,17 +378,14 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
-        // 1. Área impactada
         if (dom.complaintArea) {
             dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
         }
 
-        // 2. Etapa afetada
         if (dom.complaintStage) {
             dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
         }
 
-        // 3. Ferramenta (sem EXCEL + "Outros..." estático com valor "OUTROS" para disparar a caixa de texto)
         if (dom.complaintTool) {
             const ferramentasFiltradas = resFerramentas.data.filter(t => 
                 t.nome.toUpperCase() !== 'EXCEL' && !t.nome.toLowerCase().startsWith('outro')
@@ -395,7 +401,7 @@ async function populateFormDropdowns() {
 }
 
 /* =========================================================================
-   PÁGINA 3: MURAL E FEED (mural.html)
+   PÁGINA 3: MURAL E FEED COM MODERAÇÃO ADMIN (mural.html)
    ========================================================================= */
 async function initMuralPage() {
     if (dom.goToFormBtn) {
@@ -478,6 +484,25 @@ async function populateFilterDropdowns() {
     }
 }
 
+function getStatusBadge(status) {
+    const s = status || "Em Análise";
+    let badgeClass = "badge-analise";
+    let icon = "fa-hourglass-half";
+
+    if (s === "Em Planejamento") {
+        badgeClass = "badge-planejamento";
+        icon = "fa-gears";
+    } else if (s === "Concluída") {
+        badgeClass = "badge-concluida";
+        icon = "fa-circle-check";
+    } else if (s === "Não Viável") {
+        badgeClass = "badge-noviavel";
+        icon = "fa-circle-xmark";
+    }
+
+    return `<span class="status-badge ${badgeClass}"><i class="fa-solid ${icon}"></i> ${escapeHTML(s)}</span>`;
+}
+
 async function renderFeed() {
     try {
         dom.cardsFeed.innerHTML = `
@@ -490,7 +515,7 @@ async function renderFeed() {
         let query = supabaseCliente
             .from("reclamacoes")
             .select(`
-                id, titulo, impacto_dor, criado_em, area_id, ferramenta_id, etapa_id,
+                id, titulo, impacto_dor, criado_em, area_id, ferramenta_id, etapa_id, status, resposta_admin,
                 areas(nome),
                 ferramentas(nome),
                 etapas(nome),
@@ -525,24 +550,65 @@ async function renderFeed() {
             return;
         }
 
+        const isAdmin = state.user && state.user.is_admin;
+
         dom.cardsFeed.innerHTML = list.map(item => {
             const dateStr = item.criado_em ? new Date(item.criado_em).toLocaleDateString("pt-BR") : "";
-            
             const areaNome = item.areas ? item.areas.nome : "Desconhecido";
             const ferramentaNome = item.ferramentas ? item.ferramentas.nome : "Desconhecido";
             const autorNome = item.perfis ? item.perfis.nome : "Operador Anônimo";
+            const statusAtual = item.status || "Em Análise";
+            const resposta = item.resposta_admin ? escapeHTML(item.resposta_admin) : "";
+
+            // Painel de Moderação exclusivo para Gestores / Admins
+            let adminControls = "";
+            if (isAdmin) {
+                adminControls = `
+                    <div class="admin-panel" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                            <label style="font-size: 0.85rem; color: #a0aec0; font-weight: 600;">Status Admin:</label>
+                            <select class="admin-status-select" data-id="${item.id}" style="padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568;">
+                                <option value="Em Análise" ${statusAtual === "Em Análise" ? "selected" : ""}>🟡 Em Análise</option>
+                                <option value="Em Planejamento" ${statusAtual === "Em Planejamento" ? "selected" : ""}>🔵 Em Planejamento</option>
+                                <option value="Concluída" ${statusAtual === "Concluída" ? "selected" : ""}>🟢 Concluída</option>
+                                <option value="Não Viável" ${statusAtual === "Não Viável" ? "selected" : ""}>🔴 Não Viável</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="admin-response-input" data-id="${item.id}" placeholder="Resposta/Feedback da gestão..." value="${resposta}" style="flex: 1; padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568; font-size: 0.85rem;">
+                            <button class="btn btn-primary btn-save-admin" onclick="saveAdminResponse('${item.id}')" style="padding: 6px 14px; font-size: 0.85rem;">Salvar</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Exibição da resposta da gestão para o público
+            let respostaHtml = "";
+            if (resposta) {
+                respostaHtml = `
+                    <div class="admin-feedback-box" style="margin-top: 12px; padding: 10px 14px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 0.88rem;">
+                        <strong><i class="fa-solid fa-reply"></i> Resposta da Gestão:</strong>
+                        <p style="margin-top: 4px; color: #e2e8f0;">${resposta}</p>
+                    </div>
+                `;
+            }
 
             return `
                 <article class="complaint-card" data-id="${item.id}" style="padding: 20px;">
                     <div class="card-center" style="width: 100%;">
-                        <h3 class="card-title">${escapeHTML(item.titulo)}</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <h3 class="card-title" style="margin: 0;">${escapeHTML(item.titulo)}</h3>
+                            ${getStatusBadge(statusAtual)}
+                        </div>
                         <p class="card-desc">${escapeHTML(item.impacto_dor)}</p>
+                        ${respostaHtml}
                         <div class="card-tags" style="margin-top: 12px;">
                             <span class="tag tag-area"><i class="fa-regular fa-folder-open"></i> ${escapeHTML(areaNome)}</span>
                             <span class="tag tag-tool"><i class="fa-solid fa-wrench"></i> ${escapeHTML(ferramentaNome)}</span>
                             <span class="tag tag-meta"><i class="fa-regular fa-user"></i> ${escapeHTML(autorNome)}</span>
                             <span class="tag tag-meta"><i class="fa-regular fa-calendar"></i> ${dateStr}</span>
                         </div>
+                        ${adminControls}
                     </div>
                 </article>
             `;
@@ -556,6 +622,33 @@ async function renderFeed() {
         dom.cardsFeed.innerHTML = `<div class="empty-state"><p>Erro ao obter dados do banco de dados.</p></div>`;
     }
 }
+
+// Salvar Atualização de Status e Resposta do Admin
+window.saveAdminResponse = async function(id) {
+    const statusSelect = document.querySelector(`.admin-status-select[data-id="${id}"]`);
+    const responseInput = document.querySelector(`.admin-response-input[data-id="${id}"]`);
+
+    if (!statusSelect) return;
+
+    const newStatus = statusSelect.value;
+    const newResponse = responseInput ? responseInput.value.trim() : "";
+
+    try {
+        showToast("Atualizando sugestão...");
+        const { error } = await supabaseCliente
+            .from("reclamacoes")
+            .update({ status: newStatus, resposta_admin: newResponse })
+            .eq("id", id);
+
+        if (error) throw error;
+
+        showToast("Status e resposta salvos com sucesso!");
+        renderFeed();
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao atualizar: " + error.message);
+    }
+};
 
 function renderPaginationHTML(totalPages) {
     if (totalPages <= 1) { dom.pagination.innerHTML = ""; return; }
