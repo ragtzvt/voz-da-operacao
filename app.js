@@ -151,30 +151,12 @@ function initLoginPage() {
 
             const email = dom.regEmail.value.trim();
             const password = dom.regPassword.value;
-            let areaId = dom.regArea.value;
-            const customAreaInput = document.getElementById("customAreaInput");
+            const areaId = dom.regArea.value;
 
             if (!validarEmailCorporativo(email)) return;
 
             try {
                 showToast("Criando conta no sistema...");
-
-                if (areaId === "OUTROS") {
-                    const customAreaName = customAreaInput ? customAreaInput.value.trim() : "";
-                    if (!customAreaName) {
-                        showToast("Por favor, digite o nome do seu setor.");
-                        return;
-                    }
-
-                    const { data: newArea, error: areaErr } = await supabaseCliente
-                        .from("areas")
-                        .insert({ nome: customAreaName })
-                        .select("id")
-                        .single();
-
-                    if (areaErr) throw new Error("Erro ao salvar novo setor: " + areaErr.message);
-                    areaId = newArea.id;
-                }
 
                 const { data, error } = await supabaseCliente.auth.signUp({
                     email: email,
@@ -218,31 +200,7 @@ async function loadAreasForRegister() {
 
         if (error) console.error("Erro ao carregar áreas:", error.message);
 
-        let options = '<option value="" disabled selected>Selecione seu setor...</option>';
-        if (areas && areas.length > 0) {
-            options += areas.map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("");
-        }
-        options += '<option value="OUTROS">Outros...</option>';
-        dom.regArea.innerHTML = options;
-
-        const customAreaGroup = document.getElementById("customAreaGroup");
-        const customAreaInput = document.getElementById("customAreaInput");
-
-        dom.regArea.addEventListener("change", (e) => {
-            if (e.target.value === "OUTROS") {
-                if (customAreaGroup) customAreaGroup.style.display = "block";
-                if (customAreaInput) {
-                    customAreaInput.required = true;
-                    customAreaInput.focus();
-                }
-            } else {
-                if (customAreaGroup) customAreaGroup.style.display = "none";
-                if (customAreaInput) {
-                    customAreaInput.required = false;
-                    customAreaInput.value = "";
-                }
-            }
-        });
+        dom.regArea.innerHTML = formatDropdownOptions(areas, "Selecione seu setor...");
     } catch (error) {
         console.error("Falha ao popular dropdown de setores:", error);
     }
@@ -261,10 +219,6 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
-    // Eventos do "Outros..." para Área e Ferramenta
-    setupCustomOptionToggle("complaintArea", "customAreaGroup", "customAreaInput");
-    setupCustomOptionToggle("complaintTool", "customToolGroup", "customToolInput");
-
     if (state.user && state.user.area_id) {
         dom.complaintArea.value = state.user.area_id;
     }
@@ -274,9 +228,9 @@ async function initFormPage() {
 
         const title = dom.complaintTitle.value.trim();
         const description = dom.complaintDescription.value.trim();
-        let stageId = dom.complaintStage.value;
-        let areaId = dom.complaintArea.value;
-        let toolId = dom.complaintTool.value;
+        const stageId = dom.complaintStage.value;
+        const areaId = dom.complaintArea.value;
+        const toolId = dom.complaintTool.value;
 
         if (!title || !description || !stageId || !areaId || !toolId) {
             showToast("Por favor, preencha todos os campos.");
@@ -290,7 +244,7 @@ async function initFormPage() {
             const { data: duplicadas, error: dupError } = await supabaseCliente
                 .rpc("verificar_reclamacao_duplicada", {
                     p_titulo: title,
-                    p_area_id: areaId === "OUTROS" ? "00000000-0000-0000-0000-000000000000" : areaId
+                    p_area_id: areaId
                 });
 
             if (dupError) throw dupError;
@@ -299,30 +253,6 @@ async function initFormPage() {
                 const encontrada = duplicadas[0].titulo;
                 showToast(`Já existe uma sugestão similar: "${encontrada}". Verifique no Mural!`);
                 return;
-            }
-
-            // Trata ÁREA se for "OUTROS"
-            if (areaId === "OUTROS") {
-                const input = document.getElementById("customAreaInput");
-                const customName = input ? input.value.trim() : "";
-                if (!customName) { showToast("Por favor, digite o nome da nova área."); return; }
-
-                const { data: newArea, error: err } = await supabaseCliente
-                    .from("areas").insert({ nome: customName }).select("id").single();
-                if (err) throw new Error("Erro ao salvar nova área: " + err.message);
-                areaId = newArea.id;
-            }
-
-            // Trata FERRAMENTA se for "OUTROS"
-            if (toolId === "OUTROS") {
-                const input = document.getElementById("customToolInput");
-                const customName = input ? input.value.trim() : "";
-                if (!customName) { showToast("Por favor, digite o nome da nova ferramenta."); return; }
-
-                const { data: newTool, error: err } = await supabaseCliente
-                    .from("ferramentas").insert({ nome: customName }).select("id").single();
-                if (err) throw new Error("Erro ao salvar nova ferramenta: " + err.message);
-                toolId = newTool.id;
             }
 
             showToast("Enviando sugestão...");
@@ -353,28 +283,22 @@ async function initFormPage() {
     });
 }
 
-function setupCustomOptionToggle(selectId, groupContainerId, inputId) {
-    const selectElem = document.getElementById(selectId);
-    const groupElem = document.getElementById(groupContainerId);
-    const inputElem = document.getElementById(inputId);
+function formatDropdownOptions(items, placeholder) {
+    if (!items) return `<option value="" disabled selected>${placeholder}</option>`;
 
-    if (selectElem) {
-        selectElem.addEventListener("change", (e) => {
-            if (e.target.value === "OUTROS") {
-                if (groupElem) groupElem.style.display = "block";
-                if (inputElem) {
-                    inputElem.required = true;
-                    inputElem.focus();
-                }
-            } else {
-                if (groupElem) groupElem.style.display = "none";
-                if (inputElem) {
-                    inputElem.required = false;
-                    inputElem.value = "";
-                }
-            }
-        });
+    // Remove qualquer registro que venha do banco chamado "Outros"
+    const cleanItems = items.filter(item => !item.nome.toLowerCase().startsWith("outro"));
+
+    let html = `<option value="" disabled selected>${placeholder}</option>`;
+    html += cleanItems.map(item => `<option value="${item.id}">${escapeHTML(item.nome)}</option>`).join("");
+    
+    // Adiciona uma única opção "Outros..." estática no final
+    const outrosItem = items.find(item => item.nome.toLowerCase().startsWith("outro"));
+    if (outrosItem) {
+        html += `<option value="${outrosItem.id}">Outros...</option>`;
     }
+
+    return html;
 }
 
 async function populateFormDropdowns() {
@@ -389,21 +313,9 @@ async function populateFormDropdowns() {
         if (resFerramentas.error) throw resFerramentas.error;
         if (resEtapas.error) throw resEtapas.error;
 
-        // Áreas + Outros...
-        dom.complaintArea.innerHTML = '<option value="" disabled selected>Selecione a área impactada...</option>' + 
-            resAreas.data.filter(a => !a.nome.toLowerCase().includes("outro")).map(a => `<option value="${a.id}">${escapeHTML(a.nome)}</option>`).join("") +
-            '<option value="OUTROS">Outros...</option>';
-        
-        // Ferramentas + Outros...
-        dom.complaintTool.innerHTML = '<option value="" disabled selected>Selecione a ferramenta...</option>' + 
-            resFerramentas.data.filter(t => !t.nome.toLowerCase().includes("outro")).map(t => `<option value="${t.id}">${escapeHTML(t.nome)}</option>`).join("") +
-            '<option value="OUTROS">Outros...</option>';
-
-        // Etapas em ordem + Outros... no FINAL fixo
-        dom.complaintStage.innerHTML = '<option value="" disabled selected>Selecione a etapa afetada...</option>' + 
-            resEtapas.data.filter(e => !e.nome.toLowerCase().includes("outro")).map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join("") +
-            '<option value="OUTROS">Outros...</option>';
-
+        dom.complaintArea.innerHTML = formatDropdownOptions(resAreas.data, "Selecione a área impactada...");
+        dom.complaintTool.innerHTML = formatDropdownOptions(resFerramentas.data, "Selecione a ferramenta...");
+        dom.complaintStage.innerHTML = formatDropdownOptions(resEtapas.data, "Selecione a etapa afetada...");
     } catch (error) {
         showToast("Erro ao carregar opções do formulário.");
     }
