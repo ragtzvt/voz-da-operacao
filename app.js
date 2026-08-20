@@ -56,7 +56,6 @@ async function loadLocalSession() {
     const saved = localStorage.getItem("voz_user");
     if (saved) {
         state.user = JSON.parse(saved);
-        // Atualiza/Valida permissão de Admin com o banco
         try {
             const { data: profile } = await supabaseCliente
                 .from("perfis")
@@ -234,7 +233,6 @@ async function initFormPage() {
 
     await populateFormDropdowns();
 
-    // Comportamento dinâmico EXCLUSIVO da Ferramenta ao selecionar "Outros..."
     const customToolGroup = document.getElementById("customToolGroup");
     const customToolInput = document.getElementById("customToolInput");
 
@@ -486,22 +484,19 @@ async function populateFilterDropdowns() {
 }
 
 function getStatusBadge(status) {
-    const s = status || "Em Análise";
-    let badgeClass = "badge-analise";
-    let icon = "fa-hourglass-half";
-
-    if (s === "Em Planejamento") {
-        badgeClass = "badge-planejamento";
-        icon = "fa-gears";
-    } else if (s === "Concluída") {
-        badgeClass = "badge-concluida";
-        icon = "fa-circle-check";
-    } else if (s === "Não Viável") {
-        badgeClass = "badge-noviavel";
-        icon = "fa-circle-xmark";
+    const s = (status || "").trim();
+    
+    if (s === "Em Planejamento" || s === "EM_PLANEJAMENTO") {
+        return `<span class="status-badge badge-planejamento"><i class="fa-solid fa-gears"></i> Em Planejamento</span>`;
     }
-
-    return `<span class="status-badge ${badgeClass}"><i class="fa-solid ${icon}"></i> ${escapeHTML(s)}</span>`;
+    if (s === "Concluída" || s === "CONCLUIDA" || s === "Concluida") {
+        return `<span class="status-badge badge-concluida"><i class="fa-solid fa-circle-check"></i> Concluída</span>`;
+    }
+    if (s === "Não Viável" || s === "NAO_VIAVEL" || s === "Nao Viavel") {
+        return `<span class="status-badge badge-noviavel"><i class="fa-solid fa-circle-xmark"></i> Não Viável</span>`;
+    }
+    
+    return `<span class="status-badge badge-analise"><i class="fa-solid fa-hourglass-half"></i> Em Análise</span>`;
 }
 
 async function renderFeed() {
@@ -561,14 +556,13 @@ async function renderFeed() {
             const statusAtual = item.status || "Em Análise";
             const resposta = item.resposta_admin ? escapeHTML(item.resposta_admin) : "";
 
-            // Painel de Moderação exclusivo para Gestores / Admins
             let adminControls = "";
             if (isAdmin) {
                 adminControls = `
                     <div class="admin-panel" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
                             <label style="font-size: 0.85rem; color: #a0aec0; font-weight: 600;">Status Admin:</label>
-                            <select class="admin-status-select" data-id="${item.id}" style="padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568;">
+                            <select id="status_select_${item.id}" style="padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568;">
                                 <option value="Em Análise" ${statusAtual === "Em Análise" ? "selected" : ""}>🟡 Em Análise</option>
                                 <option value="Em Planejamento" ${statusAtual === "Em Planejamento" ? "selected" : ""}>🔵 Em Planejamento</option>
                                 <option value="Concluída" ${statusAtual === "Concluída" ? "selected" : ""}>🟢 Concluída</option>
@@ -576,14 +570,13 @@ async function renderFeed() {
                             </select>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <input type="text" class="admin-response-input" data-id="${item.id}" placeholder="Resposta/Feedback da gestão..." value="${resposta}" style="flex: 1; padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568; font-size: 0.85rem;">
-                            <button class="btn btn-primary btn-save-admin" onclick="saveAdminResponse('${item.id}')" style="padding: 6px 14px; font-size: 0.85rem;">Salvar</button>
+                            <input type="text" id="response_input_${item.id}" placeholder="Resposta/Feedback da gestão..." value="${resposta}" style="flex: 1; padding: 6px 12px; border-radius: 6px; background: #1a202c; color: #fff; border: 1px solid #4a5568; font-size: 0.85rem;">
+                            <button type="button" class="btn btn-primary" onclick="saveAdminResponse('${item.id}')" style="padding: 6px 14px; font-size: 0.85rem;">Salvar</button>
                         </div>
                     </div>
                 `;
             }
 
-            // Exibição da resposta da gestão para o público
             let respostaHtml = "";
             if (resposta) {
                 respostaHtml = `
@@ -624,30 +617,37 @@ async function renderFeed() {
     }
 }
 
-// Salvar Atualização de Status e Resposta do Admin
 window.saveAdminResponse = async function(id) {
-    const statusSelect = document.querySelector(`.admin-status-select[data-id="${id}"]`);
-    const responseInput = document.querySelector(`.admin-response-input[data-id="${id}"]`);
+    const statusSelect = document.getElementById(`status_select_${id}`);
+    const responseInput = document.getElementById(`response_input_${id}`);
 
-    if (!statusSelect) return;
+    if (!statusSelect) {
+        showToast("Erro ao localizar campo de status.");
+        return;
+    }
 
     const newStatus = statusSelect.value;
     const newResponse = responseInput ? responseInput.value.trim() : "";
 
     try {
         showToast("Atualizando sugestão...");
+        
         const { error } = await supabaseCliente
             .from("reclamacoes")
-            .update({ status: newStatus, resposta_admin: newResponse })
+            .update({ 
+                status: newStatus, 
+                resposta_admin: newResponse 
+            })
             .eq("id", id);
 
         if (error) throw error;
 
         showToast("Status e resposta salvos com sucesso!");
-        renderFeed();
+        await renderFeed();
+
     } catch (error) {
-        console.error(error);
-        showToast("Erro ao atualizar: " + error.message);
+        console.error("Erro ao salvar admin:", error);
+        showToast("Erro ao salvar: " + error.message);
     }
 };
 
